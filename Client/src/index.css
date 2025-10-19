@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+body{
+    font-family: "Montserrat", sans-serif;
+    background: #faf9f5;
+}
+:root {
+  color-scheme: light;
+}
+.dark :root {
+  color-scheme: dark;
+}
+.dark body {
+  background: #0a0a0a;
+  color: #e5e5e5;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-in-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-in-out forwards;
+  transform-origin: top;
+}
+
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none; 
+}
+
+*::-webkit-scrollbar {
+  display: none; 
+}

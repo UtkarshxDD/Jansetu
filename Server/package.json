@@ -1,0 +1,35 @@
+{
+  "name": "jansetu-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
+    "start": "node -r dotenv/config --experimental-json-modules src/index.js",
+    "seed": "node -r dotenv/config --experimental-json-modules seed-cli.js seed",
+    "seed:clear": "node -r dotenv/config --experimental-json-modules seed-cli.js clear",
+    "seed:help": "node -r dotenv/config --experimental-json-modules seed-cli.js help"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cloudinary": "^2.7.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.15.0",
+    "mongoose": "^8.13.2",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "vwo-fme-node-sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

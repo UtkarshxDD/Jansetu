@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .title { font: 700 20px Arial, Helvetica, sans-serif; fill: #1f2937; }
+      .subtitle { font: 600 14px Arial, Helvetica, sans-serif; fill: #111827; }
+      .text { font: 12px Arial, Helvetica, sans-serif; fill: #111827; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 8; }
+      .group { fill: #f9fafb; stroke: #9ca3af; stroke-width: 2; rx: 12; }
+      .shadow { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
+      .arrow { stroke: #111827; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrowBoth { stroke: #111827; stroke-width: 2; fill: none; marker-start: url(#arrowheadStart); marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#111827" />
+    </marker>
+    <marker id="arrowheadStart" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="#111827" />
+    </marker>
+  </defs>
+
+  <!-- Diagram Title -->
+  <text x="600" y="34" text-anchor="middle" class="title">Janhit System Architecture</text>
+
+  <!-- Clients Group -->
+  <g class="shadow">
+    <rect class="group" x="20" y="60" width="260" height="210" />
+    <text x="30" y="86" class="subtitle">Clients</text>
+
+    <rect class="box" x="40" y="100" width="220" height="40" />
+    <text x="150" y="125" text-anchor="middle" class="text">Citizen User</text>
+
+    <rect class="box" x="40" y="150" width="220" height="40" />
+    <text x="150" y="175" text-anchor="middle" class="text">Official</text>
+
+    <rect class="box" x="40" y="200" width="220" height="40" />
+    <text x="150" y="225" text-anchor="middle" class="text">Admin</text>
+  </g>
+
+  <!-- Frontend Group -->
+  <g class="shadow">
+    <rect class="group" x="320" y="60" width="300" height="210" />
+    <text x="330" y="86" class="subtitle">Client (React SPA)</text>
+
+    <rect class="box" x="350" y="110" width="240" height="110" />
+    <text x="470" y="140" text-anchor="middle" class="text">React App (Vite)</text>
+    <text x="470" y="160" text-anchor="middle" class="text">React Router + ProtectedRoute</text>
+    <text x="470" y="180" text-anchor="middle" class="text">Auth token in localStorage</text>
+  </g>
+
+  <!-- Backend Group -->
+  <g class="shadow">
+    <rect class="group" x="650" y="40" width="510" height="360" />
+    <text x="660" y="66" class="subtitle">Server (Node.js + Express)</text>
+
+    <!-- Express App -->
+    <rect class="box" x="680" y="80" width="460" height="50" />
+    <text x="910" y="110" text-anchor="middle" class="text">Express App (CORS, JSON, Cookies, Static /uploads)</text>
+
+    <!-- Auth -->
+    <rect class="box" x="680" y="140" width="220" height="50" />
+    <text x="790" y="170" text-anchor="middle" class="text">JWT Auth Middleware</text>
+    <text x="790" y="186" text-anchor="middle" class="text">cookies / Bearer token</text>
+
+    <!-- Users Routes -->
+    <rect class="box" x="920" y="140" width="220" height="50" />
+    <text x="1030" y="165" text-anchor="middle" class="text">Users Routes</text>
+    <text x="1030" y="181" text-anchor="middle" class="text">login, profile, problems</text>
+
+    <!-- Feed Routes -->
+    <rect class="box" x="680" y="200" width="220" height="60" />
+    <text x="790" y="225" text-anchor="middle" class="text">Feed Routes</text>
+    <text x="790" y="243" text-anchor="middle" class="text">posts, likes, comments,</text>
+    <text x="790" y="259" text-anchor="middle" class="text">bookmarks, notifications</text>
+
+    <!-- Campaign Routes -->
+    <rect class="box" x="920" y="200" width="220" height="60" />
+    <text x="1030" y="225" text-anchor="middle" class="text">Campaign Routes</text>
+    <text x="1030" y="243" text-anchor="middle" class="text">create, updates, stats,</text>
+    <text x="1030" y="259" text-anchor="middle" class="text">admin review</text>
+
+    <!-- Admin Routes -->
+    <rect class="box" x="680" y="270" width="460" height="50" />
+    <text x="910" y="300" text-anchor="middle" class="text">Admin Routes</text>
+  </g>
+
+  <!-- Data Stores & Services Group -->
+  <g class="shadow">
+    <rect class="group" x="120" y="440" width="980" height="300" />
+    <text x="130" y="466" class="subtitle">Storage & External Services</text>
+
+    <!-- MongoDB -->
+    <rect class="box" x="220" y="520" width="260" height="100" />
+    <text x="350" y="548" text-anchor="middle" class="text">MongoDB</text>
+    <text x="350" y="566" text-anchor="middle" class="text">users, officials, posts,</text>
+    <text x="350" y="582" text-anchor="middle" class="text">problems, campaigns,</text>
+    <text x="350" y="598" text-anchor="middle" class="text">comments, notifications</text>
+
+    <!-- Local Uploads -->
+    <rect class="box" x="540" y="520" width="240" height="100" />
+    <text x="660" y="548" text-anchor="middle" class="text">Local Uploads</text>
+    <text x="660" y="566" text-anchor="middle" class="text">/uploads, /uploads/feed</text>
+
+    <!-- Cloudinary -->
+    <rect class="box" x="820" y="520" width="240" height="100" />
+    <text x="940" y="548" text-anchor="middle" class="text">Cloudinary</text>
+    <text x="940" y="566" text-anchor="middle" class="text">image upload & optimization</text>
+  </g>
+
+  <!-- Flows: Clients -> SPA -->
+  <line class="arrow" x1="280" y1="165" x2="350" y2="165" />
+  
+  <!-- SPA -> Express App -->
+  <line class="arrow" x1="590" y1="165" x2="680" y2="105" />
+
+  <!-- App -> Auth & Routes -->
+  <line class="arrow" x1="910" y1="130" x2="790" y2="140" />
+  <line class="arrow" x1="910" y1="130" x2="1030" y2="140" />
+  <line class="arrow" x1="910" y1="130" x2="790" y2="200" />
+  <line class="arrow" x1="910" y1="130" x2="1030" y2="200" />
+  <line class="arrow" x1="910" y1="130" x2="910" y2="270" />
+
+  <!-- Auth -> DB -->
+  <line class="arrow" x1="790" y1="190" x2="350" y2="520" />
+
+  <!-- Routes -> DB -->
+  <line class="arrow" x1="1030" y1="190" x2="350" y2="520" />
+  <line class="arrow" x1="790" y1="260" x2="350" y2="520" />
+  <line class="arrow" x1="1030" y1="260" x2="350" y2="520" />
+  <line class="arrow" x1="910" y1="320" x2="350" y2="520" />
+
+  <!-- Media: Routes -> Local Uploads -->
+  <line class="arrow" x1="790" y1="260" x2="660" y2="520" />
+  <line class="arrow" x1="1030" y1="190" x2="660" y2="520" />
+
+  <!-- Local Uploads <-> Cloudinary -->
+  <line class="arrowBoth" x1="780" y1="570" x2="820" y2="570" />
+
+  <!-- Legend -->
+  <g>
+    <rect class="box" x="20" y="740" width="600" height="40" />
+    <text x="30" y="765" class="text">Legend: Solid arrows show request/response flows. Double-ended arrow shows media sync between local storage and Cloudinary.</text>
+  </g>
+
+</svg>
+
+
+

@@ -64,7 +64,7 @@ const Navbar: React.FC = () => {
         socket.on(`notification_${userId}`, (newNotif) => {
           setNotifications(prev => [newNotif, ...prev]);
           setUnreadCount(prev => prev + 1);
-          toast.info(newNotif.message);
+          toast(newNotif.message);
         });
       }
       return () => { socket.disconnect(); };

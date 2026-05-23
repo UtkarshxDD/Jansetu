@@ -16,7 +16,6 @@ import {
   User,
   DollarSign,
   Calendar,
-  TrendingUp,
   Download,
   Bell
 } from 'lucide-react';
@@ -44,6 +43,7 @@ interface Complaint {
     coordinates: [number, number];
   };
   images: string[];
+  media?: string[];
   createdAt: string;
   user: {
     _id: string;
@@ -59,6 +59,7 @@ interface Complaint {
   adminNotes?: string;
   urgencyScore?: number;
   escalated?: boolean;
+  locationVerified?: boolean;
 }
 
 interface PendingCampaign {
@@ -174,7 +175,7 @@ const AdminDashboard: React.FC = () => {
           socket.on(`notification_${payload._id}`, (newNotif: any) => {
             setNotifications(prev => [newNotif, ...prev]);
             setUnreadCount(prev => prev + 1);
-            toast.info(newNotif.message);
+            toast(newNotif.message);
           });
         } catch (e) {}
       }

@@ -17,7 +17,7 @@ import { io } from 'socket.io-client';
 import {
   AlertTriangle, X, MapPin, Trash2, Navigation,
   Flame, CloudRain, Wind, Thermometer, Send, Plus, Zap,
-  Check, Activity, ChevronRight, ChevronLeft,
+  Check, CheckCircle, Activity, ChevronRight, ChevronLeft,
   Eye, EyeOff, Layers, RefreshCw, Info, Heart, Share2
 } from 'lucide-react';
 import { API } from '../ApiUri';
@@ -475,7 +475,10 @@ const MapPage: React.FC = () => {
       setIssues(prev => prev.map(issue => 
         issue.id === data.issueId ? { ...issue, status: data.status } : issue
       ));
-      setSelectedIssue(prev => prev?.id === data.issueId ? { ...prev, status: data.status } : prev);
+      setSelectedIssue(prev => {
+        if (!prev || prev.id !== data.issueId) return prev;
+        return { ...prev, status: data.status };
+      });
       
       const statusLabel = data.status.replace('_', ' ').toUpperCase();
       toast(`An issue status was just updated to ${statusLabel}!`, { 
@@ -583,7 +586,7 @@ const MapPage: React.FC = () => {
         const dupId = err.response.data.duplicateId;
         const dupIssue = issues.find(i => i.id === dupId);
         if (dupIssue) {
-          onSelect(dupIssue);
+          setSelectedIssue(dupIssue);
         }
       } else {
         toast.error(err.response?.data?.message || 'Failed to create issue');

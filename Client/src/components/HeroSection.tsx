@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Droplet, Heart, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { MapPin, Droplet, Heart, ShieldCheck, Zap } from 'lucide-react';
 
 const HeroSection: React.FC = () => {
     return (

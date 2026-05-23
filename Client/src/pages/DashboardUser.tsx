@@ -335,7 +335,7 @@ const DashboardUser: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
                 {issues.length > 0 ? (
                   <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-4">
-                    {issues.map((issue, idx) => {
+                    {issues.map((issue) => {
                       const statusColors: Record<string, string> = {
                         pending: 'bg-amber-100 text-amber-700 ring-amber-500/30',
                         under_review: 'bg-blue-100 text-blue-700 ring-blue-500/30',

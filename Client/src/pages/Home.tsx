@@ -1,7 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
 import HeroSection from '../components/HeroSection';
 import ModulesSection from '../components/ModulesSection';
 import HowItWorksSection from '../components/HowItWorksSection';

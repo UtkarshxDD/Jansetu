@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Trophy, Medal, Award, MapPin } from 'lucide-react';
+import { Trophy, Medal, Award } from 'lucide-react';
 import { API } from '../ApiUri';
 import multiavatar from '@multiavatar/multiavatar';
 

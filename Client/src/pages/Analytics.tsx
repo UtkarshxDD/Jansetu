@@ -117,7 +117,7 @@ const Analytics: React.FC = () => {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {categoryData.map((entry:any, index:number) => (
+                    {categoryData.map((_entry: unknown, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

@@ -7,10 +7,13 @@ import mongoose from "mongoose";
 import fetch from "node-fetch";
 import path from "path";
 import fs from "fs";
+import { sendEmail } from "../utils/sendEmail.js";
+import { createNotification, notifyAdmins } from "../utils/notificationUtils.js";
+import { v2 as cloudinary } from "cloudinary";
 
 export const createProblem = async (req, res) => {
     try {
-        const { title, description, category, coordinates, rating, priority } = req.body;
+        const { title, description, category, coordinates, rating, priority, exifLat, exifLng } = req.body;
         const userId = req.params.userId;
 
         const ratingNum = Number(rating);
@@ -36,6 +39,26 @@ export const createProblem = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Coordinates must be numbers' });
         }
 
+        // Duplicate Issue Prevention ($near geospatial query)
+        const duplicateIssue = await ProblemReport.findOne({
+            category: category,
+            status: { $in: ['pending', 'under_review', 'assigned'] },
+            location: {
+                $near: {
+                    $geometry: { type: "Point", coordinates: coordsArray },
+                    $maxDistance: 50 // 50 meters
+                }
+            }
+        });
+
+        if (duplicateIssue) {
+            return res.status(409).json({
+                success: false,
+                message: "A similar issue was already reported nearby.",
+                duplicateId: duplicateIssue._id
+            });
+        }
+
         // Reverse geocoding (optional best-effort)
         let humanAddress = '';
         try {
@@ -50,8 +73,41 @@ export const createProblem = async (req, res) => {
             // ignore reverse geocoding failures
         }
 
-        // Collect uploaded media file paths (if any)
-        const mediaPaths = (req.files || []).map((f) => `/uploads/${path.basename(f.path)}`);
+        // Collect uploaded media file paths (Cloudinary URLs)
+        const mediaPaths = (req.files || []).map((f) => f.path);
+
+        // EXIF Location Verification
+        let locationVerified = false;
+        if (exifLat && exifLng && mediaPaths.length > 0) {
+            const eLat = Number(exifLat);
+            const eLng = Number(exifLng);
+            const pLat = coordsArray[1];
+            const pLng = coordsArray[0];
+
+            // Haversine formula
+            const R = 6371e3; // metres
+            const φ1 = pLat * Math.PI/180;
+            const φ2 = eLat * Math.PI/180;
+            const Δφ = (eLat - pLat) * Math.PI/180;
+            const Δλ = (eLng - pLng) * Math.PI/180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c;
+
+            // Verify if photo was taken within 500 meters of the pin
+            if (distance <= 500) {
+                locationVerified = true;
+            }
+        }
+
+        // Calculate Initial Urgency & SLA Deadline
+        const urgencyScore = priority === 'high' ? 5 : priority === 'low' ? 1 : 3;
+        const slaDays = priority === 'high' ? 2 : priority === 'low' ? 14 : 7;
+        const slaDueAt = new Date();
+        slaDueAt.setDate(slaDueAt.getDate() + slaDays);
 
         const newProblem = await ProblemReport.create({
             title,
@@ -67,14 +123,28 @@ export const createProblem = async (req, res) => {
             address: humanAddress,
             priority: priority || 'medium',
             timeline: [{ type: 'created', message: 'Problem reported' }],
-            media: mediaPaths
-        })
+            media: mediaPaths,
+            locationVerified,
+            urgencyScore,
+            slaDueAt
+        });
+
+        // Award 10 Civic Points to the User
+        await User.findByIdAndUpdate(userId, { $inc: { points: 10 } });
 
         await Vote.create({
             user: userId,
             problem: newProblem._id,
             rating: ratingNum
-        })
+        });
+
+        // Notify Admins
+        await notifyAdmins({
+            type: 'new_issue',
+            message: `A new ${priority || 'medium'} priority ${category} issue was reported: "${title}"`,
+            problem: newProblem._id,
+            sender: userId
+        });
 
         res.status(201).json({
             success: true,
@@ -95,10 +165,6 @@ export const rateProblem = async (req, res) => {
         const problemId = req.params.problemId;
 
         const { rating } = req.body;
-
-
-        // console.log(userId)
-        // console.log(problemId)
 
         if (!mongoose.Types.ObjectId.isValid(problemId) || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ success: false, message: "Invalid IDs" });
@@ -133,7 +199,6 @@ export const rateProblem = async (req, res) => {
             const totalRating = allVotes.reduce((sum, vote) => sum + vote.rating, 0);
             const avgRating = totalRating / allVotes.length;
 
-            // console.log(avgRating)
             await ProblemReport.findByIdAndUpdate(problemId, {
                 averageRating: Number(avgRating.toFixed(2)),
             });
@@ -147,6 +212,43 @@ export const rateProblem = async (req, res) => {
 
     } catch (error) {
         console.error("Error rating problem:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+}
+
+export const toggleUpvote = async (req, res) => {
+    try {
+        const { problemId, userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(problemId) || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: "Invalid IDs" });
+        }
+
+        const problem = await ProblemReport.findById(problemId);
+        if (!problem) {
+            return res.status(404).json({ success: false, message: "Problem not found" });
+        }
+
+        const upvoteIndex = problem.upvotedBy.indexOf(userId);
+        let hasUpvoted = false;
+
+        if (upvoteIndex > -1) {
+            problem.upvotedBy.splice(upvoteIndex, 1);
+        } else {
+            problem.upvotedBy.push(userId);
+            hasUpvoted = true;
+        }
+
+        await problem.save();
+
+        res.status(200).json({
+            success: true,
+            hasUpvoted,
+            upvotesCount: problem.upvotedBy.length,
+            message: hasUpvoted ? "Upvoted successfully" : "Upvote removed"
+        });
+    } catch (error) {
+        console.error("Error toggling upvote:", error);
         res.status(500).json({ success: false, message: "Server Error" });
     }
 }
@@ -217,11 +319,19 @@ export const deleteProblem = async (req, res) => {
             });
         }
 
-        const toDelete = await ProblemReport.findById(problemId);
-        if (toDelete?.media?.length) {
-            for (const m of toDelete.media) {
-                const filePath = path.resolve(process.cwd(), m.replace(/^\//, ''));
-                fs.unlink(filePath, () => {});
+        // Delete associated media files
+        if (problem.media?.length) {
+            for (const m of problem.media) {
+                if (m.includes('cloudinary.com')) {
+                    const parts = m.split('/');
+                    const filenameWithExt = parts.pop();
+                    const folder = parts.pop();
+                    const publicId = `${folder}/${filenameWithExt.split('.')[0]}`;
+                    cloudinary.uploader.destroy(publicId).catch(err => console.error("Cloudinary delete err:", err));
+                } else {
+                    const filePath = path.resolve(process.cwd(), m.replace(/^\//, ''));
+                    fs.unlink(filePath, () => {});
+                }
             }
         }
         await ProblemReport.findByIdAndDelete(problemId);
@@ -239,7 +349,11 @@ export const deleteProblem = async (req, res) => {
 
 export const getAllProblems = async (req, res) => {
     try {
-        const { q, lat, lng, radiusKm } = req.query;
+        const { q, lat, lng, radiusKm, page, limit } = req.query;
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(100, parseInt(limit) || 50); // default 50, max 100
+        const skip = (pageNum - 1) * limitNum;
+
         const query = {};
 
         if (q) {
@@ -256,17 +370,22 @@ export const getAllProblems = async (req, res) => {
             });
         }
 
-        const problems = await ProblemReport.find(query).lean();
+        const [problems, total] = await Promise.all([
+            ProblemReport.find(query).skip(skip).limit(limitNum).lean(),
+            ProblemReport.countDocuments(query)
+        ]);
 
-        
         const formattedProblems = problems.map((problem) => ({
             ...problem,
-            createdBy: problem.createdBy.toString(), 
-        }));    
-        console.log(formattedProblems)
+            createdBy: problem.createdBy ? problem.createdBy.toString() : null,
+        }));
+
         res.status(200).json({
             success: true,
             count: formattedProblems.length,
+            total,
+            page: pageNum,
+            totalPages: Math.ceil(total / limitNum),
             problems: formattedProblems,
         });
     } catch (error) {
@@ -326,6 +445,40 @@ export const updateProblemStatusByOfficial = async (req, res) => {
         problem.status = status;
         problem.timeline.push({ type: 'status', message: `Status changed to ${status}${note ? ` — ${note}` : ''}` });
         await problem.save();
+
+        if (status && status !== problem.status) {
+            import('../utils/notificationUtils.js').then(({ createNotification }) => {
+                createNotification({
+                    recipient: problem.createdBy,
+                    recipientModel: 'User',
+                    type: 'status_update',
+                    message: `Your issue "${problem.title}" status changed to ${status.replace('_', ' ')}`,
+                    problem: problem._id
+                });
+            });
+        }
+
+        if (status === 'resolved') {
+            const user = await User.findById(problem.createdBy);
+            if (user && user.email) {
+                const emailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <h2 style="color: #2563eb; text-align: center;">Jansetu Civic Action</h2>
+                        <p style="font-size: 16px; color: #374151;">Hello <strong>${user.name}</strong>,</p>
+                        <p style="font-size: 16px; color: #374151;">Great news! Your reported issue <strong>"${problem.title}"</strong> has been officially marked as <strong style="color: #16a34a;">Resolved</strong>.</p>
+                        <p style="font-size: 16px; color: #374151;">Thank you for your proactive contribution to making our community better.</p>
+                        <br/>
+                        <p style="font-size: 14px; color: #6b7280; text-align: center;">- The Jansetu Team</p>
+                    </div>
+                `;
+                await sendEmail(user.email, '✅ Your Civic Issue is Resolved - Jansetu', emailHtml);
+            }
+        }
+
+        // Emit realtime update to all connected clients
+        import('../index.js').then(({ io }) => {
+            if (io) io.emit('status_updated', { issueId: problem._id.toString(), status });
+        }).catch(() => {});
 
         return res.status(200).json({ success: true, message: 'Status updated', problem });
     } catch (error) {

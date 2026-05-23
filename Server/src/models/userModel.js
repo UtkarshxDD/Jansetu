@@ -33,6 +33,14 @@ const userSchema = new mongoose.Schema({
   address: {
     type: String
   },
+  points: {
+    type: Number,
+    default: 0
+  },
+  level: {
+    type: String,
+    default: 'Bronze Citizen'
+  },
   createdAt: {
     type: Date,
     default: Date.now

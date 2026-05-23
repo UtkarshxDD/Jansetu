@@ -9,7 +9,9 @@ import {
   deleteComplaint, 
   getDashboardStats, 
   assignComplaintToOfficial, 
-  getOfficials 
+  getOfficials,
+  getLeaderboard,
+  exportComplaintsCSV
 } from "../controller/adminController.js";
 
 const router = Router();
@@ -19,7 +21,8 @@ router.route("/login").post(adminLogin);
 router.route("/logout").post(verifyJWT, adminLogout);
 
 // Dashboard
-router.route("/dashboard/stats").get(verifyJWT, getDashboardStats);
+router.route("/dashboard/stats").get(getDashboardStats);
+router.route("/export").get(verifyJWT, exportComplaintsCSV);
 
 // Complaints management
 router.route("/complaints").get(verifyJWT, getAllComplaints);
@@ -31,4 +34,7 @@ router.route("/complaints/:complaintId/assign").post(verifyJWT, assignComplaintT
 // Officials listing
 router.route("/officials").get(verifyJWT, getOfficials);
 
-export default router; 
+// Civic leaderboard (public — no auth needed for demo)
+router.route("/leaderboard").get(getLeaderboard);
+
+export default router;

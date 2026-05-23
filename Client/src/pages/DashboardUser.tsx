@@ -17,17 +17,18 @@ const DashboardUser: React.FC = () => {
     email: "",
     phone: "",
     location: "",
-    address: ""
+    address: "",
+    points: 0,
+    level: ""
   });
 
-  const [issues] = useState([
-    { id: 1, title: "Pothole on Main Road", status: "Pending" },
-    { id: 2, title: "Streetlight not working", status: "Assigned" },
-    { id: 3, title: "Garbage collection delayed", status: "Resolved" },
-  ]);
+  const [issues, setIssues] = useState<Array<{
+    _id: string; title: string; status: string; category: string; createdAt: string;
+  }>>([]);
 
   useEffect(() => {
     fetchUserProfile();
+    fetchUserIssues();
   }, []);
 
   const fetchUserProfile = async () => {
@@ -54,7 +55,9 @@ const DashboardUser: React.FC = () => {
           email: user.email || "",
           phone: user.phone || "",
           location: user.location?.coordinates ? `${user.location.coordinates[1]}, ${user.location.coordinates[0]}` : "",
-          address: user.address || ""
+          address: user.address || "",
+          points: user.points || 0,
+          level: user.level || "Bronze Citizen"
         });
       } else {
         toast.error('Failed to fetch user profile');
@@ -75,6 +78,20 @@ const DashboardUser: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const fetchUserIssues = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('id');
+      if (!token || !userId) return;
+      const res = await axios.get(`${API}/userComplaints/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) setIssues(res.data.complaints);
+    } catch (err) {
+      console.error('Error fetching user issues:', err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,8 +234,18 @@ const DashboardUser: React.FC = () => {
                     />
                   </div>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">{formData.name}</h1>
-                <p className="text-gray-600">{formData.email}</p>
+                <h1 className="text-2xl font-bold text-gray-900 mt-2">{formData.name}</h1>
+                <p className="text-gray-600 mb-3">{formData.email}</p>
+                <div className="flex gap-4 mb-4">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-lg shadow-md flex flex-col items-center">
+                    <span className="text-xs uppercase font-bold opacity-90 tracking-wider">Civic Points</span>
+                    <span className="text-2xl font-black">{formData.points}</span>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg shadow-md flex flex-col items-center justify-center">
+                    <span className="text-xs uppercase font-bold opacity-90 tracking-wider">Current Level</span>
+                    <span className="text-lg font-bold mt-1">{formData.level}</span>
+                  </div>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -302,17 +329,57 @@ const DashboardUser: React.FC = () => {
 
           {activeSection === "issues" && (
             <div>
-              <h2 className="text-lg font-medium mb-6">Your Issues</h2>
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
+                🌟 Your Civic Impact Timeline
+              </h2>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
                 {issues.length > 0 ? (
-                  issues.map(issue => (
-                    <div key={issue.id} className="border-b border-gray-200 py-2">
-                      <p className="font-medium">{issue.title}</p>
-                      <p className="text-sm text-gray-600">Status: {issue.status}</p>
-                    </div>
-                  ))
+                  <div className="relative border-l-2 border-slate-100 ml-4 space-y-8 pb-4">
+                    {issues.map((issue, idx) => {
+                      const statusColors: Record<string, string> = {
+                        pending: 'bg-amber-100 text-amber-700 ring-amber-500/30',
+                        under_review: 'bg-blue-100 text-blue-700 ring-blue-500/30',
+                        assigned: 'bg-purple-100 text-purple-700 ring-purple-500/30',
+                        resolved: 'bg-emerald-100 text-emerald-700 ring-emerald-500/30',
+                      };
+                      return (
+                        <div key={issue._id} className="relative pl-8">
+                          {/* Timeline dot */}
+                          <div className={`absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-2 border-white ring-2 ${issue.status === 'resolved' ? 'bg-emerald-500 ring-emerald-200' : 'bg-blue-500 ring-blue-200'}`}></div>
+                          
+                          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:shadow-md transition-shadow">
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <div className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">
+                                  {new Date(issue.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-1">Reported: {issue.title}</h3>
+                                <p className="text-sm text-slate-500 font-medium">Category: {issue.category}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ring-1 ${statusColors[issue.status] || 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
+                                  {issue.status.replace('_', ' ')}
+                                </span>
+                                {issue.status === 'resolved' && (
+                                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+                                    +50 Points Earned!
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <p className="text-gray-500">No issues found.</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">🌱</div>
+                    <p className="text-slate-500 font-medium mb-4">Your impact timeline is empty.</p>
+                    <button onClick={() => navigate('/map')} className="text-blue-600 font-bold hover:underline">
+                      Plant your first seed (Report an Issue) →
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

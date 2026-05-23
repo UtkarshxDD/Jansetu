@@ -199,6 +199,8 @@ export const getUserProfile = async (req, res) => {
         phone: user.phone,
         location: user.location,
         address: user.address,
+        points: user.points,
+        level: user.level,
         createdAt: user.createdAt
       }
     });
@@ -251,6 +253,24 @@ export const updateUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating user profile:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Gamification Leaderboard
+export const getLeaderboard = async (req, res) => {
+  try {
+    const topUsers = await User.find()
+      .sort({ points: -1 })
+      .limit(10)
+      .select('name points level');
+
+    res.status(200).json({
+      success: true,
+      leaderboard: topUsers
+    });
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };

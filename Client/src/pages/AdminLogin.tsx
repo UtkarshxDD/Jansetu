@@ -52,6 +52,20 @@ const AdminLogin: React.FC = () => {
           <p className="text-gray-600">Sign in to manage complaints</p>
         </div>
 
+        {/* Demo Credentials Info Box */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+          <h3 className="font-semibold mb-1 text-blue-900">Demo Credentials</h3>
+          <p><strong>Email:</strong> admin@jansetu.com</p>
+          <p><strong>Password:</strong> admin123</p>
+          <button 
+            onClick={() => setFormData({ email: 'admin@jansetu.com', password: 'admin123' })}
+            className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+            type="button"
+          >
+            Auto-fill
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-gray-700 text-sm font-medium mb-2">

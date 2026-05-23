@@ -42,10 +42,10 @@ const problemReportSchema = new mongoose.Schema({
     ref: 'User'
   },
 
-  // votes: [{
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: 'Vote'
-  // }],
+  upvotedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
 
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,
@@ -72,6 +72,14 @@ const problemReportSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  urgencyScore: {
+    type: Number,
+    default: 0
+  },
+  escalated: {
+    type: Boolean,
+    default: false
+  },
   timeline: [
     {
       type: {
@@ -89,6 +97,10 @@ const problemReportSchema = new mongoose.Schema({
       type: String // relative URL paths like /uploads/...
     }
   ],
+  locationVerified: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

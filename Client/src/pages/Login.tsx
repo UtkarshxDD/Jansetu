@@ -85,6 +85,36 @@ const Login: React.FC = () => {
             </motion.p>
           </div>
 
+          {/* Demo Credentials Info Box */}
+          <div className="mx-8 mt-6 mb-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <h3 className="font-semibold mb-2 text-blue-900 text-base border-b border-blue-200 pb-1">Quick Demo Access</h3>
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <div>
+                <span className="font-semibold text-blue-900 block mb-1">Normal User</span>
+                <p>Email: <span className="font-mono text-xs">demo@jansetu.com</span></p>
+                <p>Pass: <span className="font-mono text-xs">password123</span></p>
+                <button 
+                  onClick={() => setFormData({ email: 'demo@jansetu.com', password: 'password123' })}
+                  className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                  type="button"
+                >
+                  Auto-fill User
+                </button>
+              </div>
+              <div>
+                <span className="font-semibold text-blue-900 block mb-1">Admin User</span>
+                <p>Email: <span className="font-mono text-xs">admin@jansetu.com</span></p>
+                <p>Pass: <span className="font-mono text-xs">admin123</span></p>
+                <Link 
+                  to="/admin/login"
+                  className="inline-block mt-2 text-xs bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 transition-colors"
+                >
+                  Go to Admin Login
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {/* Form */}
           <div className="px-8 py-8">
             <form onSubmit={handleSubmit} className="space-y-6">

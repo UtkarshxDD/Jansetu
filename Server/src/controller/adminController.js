@@ -15,9 +15,12 @@ export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Hardcoded admin credentials
-    const ADMIN_EMAIL = "admin@jansetu.com";
-    const ADMIN_PASSWORD = "admin123";
+    // Credentials from environment variables (never hardcode in source)
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@jansetu.com";
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+    if (!process.env.ADMIN_EMAIL) {
+      console.warn("⚠️  ADMIN_EMAIL not set in env — using default. Set it before production.");
+    }
     
     // Check if credentials match
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
@@ -196,6 +199,21 @@ export const updateComplaintStatus = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email').populate('assignedTo', 'name department');
 
+    if (status && status !== complaint.status) {
+      import('../utils/notificationUtils.js').then(({ createNotification }) => {
+        createNotification({
+          recipient: complaint.createdBy,
+          recipientModel: 'User',
+          type: 'status_update',
+          message: `Your issue "${complaint.title}" status changed to ${status.replace('_', ' ')}`,
+          problem: complaint._id
+        });
+      });
+      import('../index.js').then(({ io }) => {
+        if (io) io.emit('status_updated', { issueId: complaint._id.toString(), status });
+      }).catch(() => {});
+    }
+
     res.status(200).json({
       success: true,
       message: "Complaint status updated successfully",
@@ -241,51 +259,62 @@ export const deleteComplaint = async (req, res) => {
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const totalComplaints = await ProblemReport.countDocuments();
-    const pendingComplaints = await ProblemReport.countDocuments({ status: 'pending' });
-    const underReviewComplaints = await ProblemReport.countDocuments({ status: 'under_review' });
-    const assignedComplaints = await ProblemReport.countDocuments({ status: 'assigned' });
-    const resolvedComplaints = await ProblemReport.countDocuments({ status: 'resolved' });
-    const totalUsers = await User.countDocuments();
-    const totalOfficials = await Official.countDocuments();
-
-    // Get complaints by category
-    const complaintsByCategory = await ProblemReport.aggregate([
+    // Single aggregation replaces 5 separate countDocuments calls
+    const [statsResult] = await ProblemReport.aggregate([
       {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 }
+        $facet: {
+          total: [{ $count: "count" }],
+          pending: [{ $match: { status: "pending" } }, { $count: "count" }],
+          underReview: [{ $match: { status: "under_review" } }, { $count: "count" }],
+          assigned: [{ $match: { status: "assigned" } }, { $count: "count" }],
+          resolved: [{ $match: { status: "resolved" } }, { $count: "count" }],
+          byCategory: [
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+          ],
+          recent: [
+            { $sort: { createdAt: -1 } },
+            { $limit: 5 },
+            {
+              $lookup: {
+                from: "users",
+                localField: "createdBy",
+                foreignField: "_id",
+                as: "createdBy",
+                pipeline: [{ $project: { name: 1 } }]
+              }
+            },
+            { $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } }
+          ]
         }
-      },
-      { $sort: { count: -1 } }
+      }
     ]);
 
-    // Get recent complaints
-    const recentComplaints = await ProblemReport.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('createdBy', 'name')
-      .lean();
+    const [totalUsers, totalOfficials] = await Promise.all([
+      User.countDocuments(),
+      Official.countDocuments()
+    ]);
+
+    const extract = (arr) => (arr?.[0]?.count ?? 0);
 
     res.status(200).json({
       success: true,
       stats: {
-        totalComplaints,
-        pendingComplaints,
-        underReviewComplaints,
-        assignedComplaints,
-        resolvedComplaints,
+        totalComplaints: extract(statsResult.total),
+        pendingComplaints: extract(statsResult.pending),
+        underReviewComplaints: extract(statsResult.underReview),
+        assignedComplaints: extract(statsResult.assigned),
+        resolvedComplaints: extract(statsResult.resolved),
         totalUsers,
         totalOfficials
       },
-      complaintsByCategory,
-      recentComplaints: recentComplaints.map(complaint => ({
+      complaintsByCategory: statsResult.byCategory,
+      recentComplaints: (statsResult.recent || []).map(complaint => ({
         ...complaint,
         _id: complaint._id.toString(),
-        createdBy: complaint.createdBy ? {
-          _id: complaint.createdBy._id.toString(),
-          name: complaint.createdBy.name
-        } : null
+        createdBy: complaint.createdBy
+          ? { _id: complaint.createdBy._id?.toString(), name: complaint.createdBy.name }
+          : null
       }))
     });
   } catch (error) {
@@ -376,6 +405,100 @@ export const getOfficials = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching officials:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Civic Leaderboard — top citizens by complaints reported & resolved
+export const getLeaderboard = async (req, res) => {
+  try {
+    const leaderboard = await ProblemReport.aggregate([
+      {
+        $group: {
+          _id: "$createdBy",
+          totalReported: { $sum: 1 },
+          totalResolved: {
+            $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] }
+          },
+          totalVotes: { $sum: "$voteCount" },
+          avgRating: { $avg: "$averageRating" }
+        }
+      },
+      { $sort: { totalResolved: -1, totalReported: -1, totalVotes: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+          pipeline: [{ $project: { name: 1, email: 1, points: 1 } }]
+        }
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          userId: "$_id",
+          name: { $ifNull: ["$user.name", "Anonymous"] },
+          email: "$user.email",
+          totalReported: 1,
+          totalResolved: 1,
+          totalVotes: 1,
+          avgRating: { $round: ["$avgRating", 1] },
+          score: {
+            $add: [
+              { $ifNull: ["$user.points", 0] },
+              { $multiply: ["$totalResolved", 10] },
+              { $multiply: ["$totalReported", 2] },
+              "$totalVotes"
+            ]
+          }
+        }
+      },
+      { $sort: { score: -1 } }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      leaderboard: leaderboard.map((entry, index) => ({
+        rank: index + 1,
+        ...entry
+      }))
+    });
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const exportComplaintsCSV = async (req, res) => {
+  try {
+    const complaints = await ProblemReport.find()
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    const headers = ['ID', 'Title', 'Category', 'Status', 'Priority', 'Severity', 'Votes', 'Created By', 'Created At'];
+    const rows = complaints.map(c => [
+      c._id.toString(),
+      `"${c.title.replace(/"/g, '""')}"`,
+      c.category,
+      c.status,
+      c.priority,
+      c.averageRating || c.rating || 0,
+      c.upvotedBy ? c.upvotedBy.length : 0,
+      c.createdBy ? `"${c.createdBy.name}"` : 'Unknown',
+      new Date(c.createdAt).toLocaleDateString()
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=jansetu_issues.csv');
+    res.status(200).send(csvContent);
+  } catch (error) {
+    console.error("Export CSV error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };

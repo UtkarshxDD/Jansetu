@@ -147,7 +147,7 @@ const Signup: React.FC = () => {
             >
               Join JanSetu
             </motion.h1>
-            <motion.p
+              <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
@@ -155,6 +155,28 @@ const Signup: React.FC = () => {
             >
               Create your account to get started
             </motion.p>
+          </div>
+
+          {/* Demo Credentials Info Box */}
+          <div className="mx-8 mt-6 mb-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <h3 className="font-semibold mb-2 text-blue-900 text-base border-b border-blue-200 pb-1">Quick Demo Access</h3>
+            <p className="mb-1 text-xs text-blue-700">You don't need to sign up! Use these credentials to login instantly.</p>
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <div>
+                <span className="font-semibold text-blue-900 block mb-1">Normal User</span>
+                <p>Email: <span className="font-mono text-xs">demo@jansetu.com</span></p>
+                <p>Pass: <span className="font-mono text-xs">password123</span></p>
+              </div>
+              <div>
+                <span className="font-semibold text-blue-900 block mb-1">Admin User</span>
+                <p>Email: <span className="font-mono text-xs">admin@jansetu.com</span></p>
+                <p>Pass: <span className="font-mono text-xs">admin123</span></p>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-blue-200 flex justify-end gap-2">
+              <Link to="/login" className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors">Go to User Login</Link>
+              <Link to="/admin/login" className="text-xs bg-gray-700 text-white px-3 py-1.5 rounded hover:bg-gray-800 transition-colors">Go to Admin Login</Link>
+            </div>
           </div>
 
           {/* Form */}

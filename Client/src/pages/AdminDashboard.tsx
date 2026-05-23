@@ -15,7 +15,10 @@ import {
   XCircle,
   User,
   DollarSign,
-  Calendar
+  Calendar,
+  TrendingUp,
+  Download,
+  Bell
 } from 'lucide-react';
 
 // Interfaces
@@ -53,6 +56,9 @@ interface Complaint {
     name: string;
     department: string;
   };
+  adminNotes?: string;
+  urgencyScore?: number;
+  escalated?: boolean;
 }
 
 interface PendingCampaign {
@@ -115,9 +121,67 @@ const AdminDashboard: React.FC = () => {
   const [reviewNotes, setReviewNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // Notification state
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+    try {
+      const res = await axios.get(`${API.replace('/users', '/notifications')}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setNotifications(res.data.notifications);
+        setUnreadCount(res.data.unreadCount);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications");
+    }
+  };
+
+  const markAllRead = async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token || unreadCount === 0) return;
+    try {
+      await axios.put(`${API.replace('/users', '/notifications')}/read-all`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error("Failed to mark read");
+    }
+  };
+
   // Initialize Dashboard
   useEffect(() => {
     checkAuth();
+    fetchComplaintsData();
+    fetchCampaignsData();
+    fetchNotifications();
+
+    // Socket for realtime updates
+    import('socket.io-client').then(({ io }) => {
+      const socket = io(API.replace('/api/v1/users', ''));
+      const adminToken = localStorage.getItem("adminToken");
+      if (adminToken) {
+        try {
+          // Decode JWT to get admin ID
+          const payload = JSON.parse(atob(adminToken.split('.')[1]));
+          socket.on(`notification_${payload._id}`, (newNotif: any) => {
+            setNotifications(prev => [newNotif, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            toast.info(newNotif.message);
+          });
+        } catch (e) {}
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'complaints') {
       fetchComplaintsData();
     } else {
@@ -159,10 +223,31 @@ const AdminDashboard: React.FC = () => {
       }
 
     } catch (error) {
-      console.error('Failed to fetch complaints data:', error);
-      toast.error('Failed to load complaints data');
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      const res = await axios.get(`${API.replace('/users', '/admin')}/export`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'jansetu_issues.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('CSV Exported Successfully!');
+    } catch (err) {
+      toast.error('Failed to export CSV');
+      console.error(err);
     }
   };
 
@@ -326,13 +411,49 @@ const AdminDashboard: React.FC = () => {
               <h1 className="text-2xl font-bold text-gray-900">JanSetu Admin Dashboard</h1>
               <p className="text-gray-600">Manage complaints and fundraising campaigns</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <LogOut size={20} />
-              Logout
-            </button>
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setNotifOpen(!notifOpen);
+                    if (!notifOpen) markAllRead();
+                  }}
+                  className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl py-2 border border-gray-100 z-[10000] max-h-[400px] overflow-y-auto">
+                    <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-900">Notifications</h3>
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-gray-500 text-sm">No notifications yet</div>
+                    ) : (
+                      notifications.map((n: any) => (
+                        <div key={n._id} className={`px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 ${!n.isRead ? 'bg-blue-50/50' : ''}`}>
+                          <p className="text-sm text-gray-800">{n.message}</p>
+                          <span className="text-xs text-gray-500 mt-1 block">{new Date(n.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <LogOut size={20} />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -430,8 +551,15 @@ const AdminDashboard: React.FC = () => {
 
             {/* Complaints Table */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 className="text-lg font-medium text-gray-900">Recent Complaints</h3>
+                <button
+                  onClick={handleExportCSV}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -448,6 +576,9 @@ const AdminDashboard: React.FC = () => {
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Priority
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Urgency
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
@@ -479,6 +610,17 @@ const AdminDashboard: React.FC = () => {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(complaint.priority)}`}>
                             {complaint.priority || 'N/A'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">{complaint.urgencyScore || 0}</span>
+                            {complaint.escalated && (
+                              <span className="text-xs text-red-600 font-bold flex items-center">
+                                <AlertCircle size={10} className="mr-1" />
+                                ESCALATED
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(complaint.createdAt).toLocaleDateString()}
@@ -636,18 +778,28 @@ const AdminDashboard: React.FC = () => {
                           <p className="text-gray-900">{selectedComplaint.user?.name || 'N/A'} ({selectedComplaint.user?.email || 'N/A'})</p>
                         </div>
 
-                  {selectedComplaint.images && selectedComplaint.images.length > 0 && (
+                  {selectedComplaint.media && selectedComplaint.media.length > 0 && (
                     <div>
                       <span className="text-sm font-medium text-gray-500">Images:</span>
                       <div className="grid grid-cols-2 gap-2 mt-2">
-                        {selectedComplaint.images.map((image, index) => (
-                          <img
-                            key={index}
-                            src={image}
-                            alt={`Complaint ${index + 1}`}
-                            className="w-full h-32 object-cover rounded"
-                          />
-                        ))}
+                        {selectedComplaint.media.map((image: string, index: number) => {
+                          const fullUrl = image.startsWith('http') ? image : `${API.replace('/api/v1/users', '')}${image}`;
+                          return (
+                            <div key={index} className="relative group">
+                              <img
+                                src={fullUrl}
+                                alt={`Complaint ${index + 1}`}
+                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90"
+                                onClick={() => window.open(fullUrl, '_blank')}
+                              />
+                              {selectedComplaint.locationVerified && index === 0 && (
+                                <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded shadow">
+                                  ✅ Verified Location
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

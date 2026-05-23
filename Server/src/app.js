@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import { isOriginAllowed } from "./config/corsOrigins.js";
 
 const app = express();
 
@@ -20,18 +21,7 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:3000",
-      "http://localhost:4173",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:5174",
-      "http://127.0.0.1:3000",
-      process.env.CORS || process.env.FRONTEND_URL || "http://localhost:5173"
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);

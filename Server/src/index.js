@@ -3,6 +3,7 @@ import app from './app.js'
 import connectDB from "./db/connectTomongoDb.js"
 import { autoSeedIfEmpty } from "./seeds/seedPosts.js"
 import { startCronJobs } from "./utils/cronJobs.js"
+import { getAllowedOrigins } from "./config/corsOrigins.js"
 
 dotenv.config({
     path:'./env'
@@ -18,8 +19,9 @@ import { Server } from 'socket.io';
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    origin: getAllowedOrigins(),
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   }
 });
 
@@ -47,7 +49,9 @@ connectDB()
   const PORT = process.env.PORT || 8000;
   server.listen(PORT, ()=>{
     console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`📱 Feed available at: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/feed`);
+    const appOrigin = getAllowedOrigins().find((o) => o.includes('vercel.app')) || process.env.FRONTEND_URL || 'http://localhost:5173';
+    const base = appOrigin.replace(/\/$/, '').replace(/\/feed$/, '');
+    console.log(`📱 Feed available at: ${base}/feed`);
   })
 })
 .catch((err) => {

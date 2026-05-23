@@ -18,6 +18,7 @@ const Navbar: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { lang, setLang, t } = useI18n();
@@ -69,7 +70,14 @@ const Navbar: React.FC = () => {
       }
       return () => { socket.disconnect(); };
     }
-  }, [])
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const handleLogOut =()=>{
     localStorage.removeItem("token");
@@ -89,7 +97,13 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-white/85 backdrop-blur-lg shadow-sm border-b border-slate-100/50 sticky top-0 z-[9999] transition-all duration-300">
+    <nav
+      className={`sticky top-0 z-[9999] bg-white dark:bg-slate-950 border-b transition-all duration-300 ${
+        scrolled
+          ? 'border-slate-200/80 shadow-md shadow-slate-900/5 dark:border-slate-800'
+          : 'border-slate-200/80 shadow-sm dark:border-slate-800'
+      }`}
+    >
       <div className="max-w-[98%] 2xl:max-w-[1600px] mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

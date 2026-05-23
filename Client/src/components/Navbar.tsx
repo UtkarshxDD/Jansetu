@@ -98,10 +98,8 @@ const Navbar: React.FC = () => {
 
   return (
     <nav
-      className={`sticky top-0 z-[9999] bg-white dark:bg-slate-950 border-b transition-all duration-300 ${
-        scrolled
-          ? 'border-slate-200/80 shadow-md shadow-slate-900/5 dark:border-slate-800'
-          : 'border-slate-200/80 shadow-sm dark:border-slate-800'
+      className={`sticky top-0 z-[9999] bg-white border-b border-slate-200/80 text-slate-800 transition-shadow duration-300 [color-scheme:light] ${
+        scrolled ? 'shadow-md shadow-slate-900/5' : 'shadow-sm'
       }`}
     >
       <div className="max-w-[98%] 2xl:max-w-[1600px] mx-auto px-2 sm:px-4 lg:px-6">
@@ -110,7 +108,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3">
               <img className="h-10 w-10 rounded-full object-cover" src={logo} alt="JanSetu Logo" />
-              <span className="text-xl font-bold text-gray-900">{t('app_name')}</span>
+              <span className="text-xl font-bold text-slate-900">{t('app_name')}</span>
             </Link>
           </div>
 
@@ -120,21 +118,21 @@ const Navbar: React.FC = () => {
 
               <Link 
                 to="/feed" 
-                className="text-gray-700 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
+                className="text-slate-600 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
               >
                 <MessageSquare className="w-4 h-4 mr-1 text-emerald-500" />
                 Community Feed
               </Link>
               <Link 
                 to="/leaderboard" 
-                className="text-gray-700 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
+                className="text-slate-600 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
               >
                 <Trophy className="w-4 h-4 mr-1 text-yellow-500" />
                 Leaderboard
               </Link>
               <Link 
                 to="/disaster-fundraising" 
-                className="text-gray-700 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
+                className="text-slate-600 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
               >
                 <HeartHandshake className="w-4 h-4 mr-1 text-rose-500" />
                 Disaster Relief
@@ -142,7 +140,7 @@ const Navbar: React.FC = () => {
               {isLoggedIn && (
                 <Link 
                   to="/mycomplaints" 
-                  className="text-gray-700 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
+                  className="text-slate-600 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
                 >
                   <ClipboardList className="w-4 h-4 mr-1 text-slate-500" />
                   My Complaints
@@ -152,7 +150,7 @@ const Navbar: React.FC = () => {
 
               <Link 
                 to="/analytics" 
-                className="text-gray-700 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
+                className="text-slate-600 hover:text-blue-600 px-2 xl:px-3 py-2 text-sm font-medium transition-colors flex items-center"
               >
                 <BarChart2 className="w-4 h-4 mr-1 text-indigo-500" />
                 Analytics
@@ -165,7 +163,7 @@ const Navbar: React.FC = () => {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -175,7 +173,7 @@ const Navbar: React.FC = () => {
             <select 
               value={lang} 
               onChange={(e) => setLang(e.target.value as any)} 
-              className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="text-sm bg-white text-slate-800 border border-slate-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="en">EN</option>
               <option value="hi">हिं</option>
@@ -278,13 +276,13 @@ const Navbar: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
+                  className="text-slate-700 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
                   Sign Up
                 </Link>
